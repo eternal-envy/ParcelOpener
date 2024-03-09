@@ -9,17 +9,17 @@ public class Program
     {
         Console.WriteLine("Enter device address (COM1):");
         var deviceAddress = Console.ReadLine();
-        Console.WriteLine("Enter coil address:");
-        var coilAddress = Convert.ToInt32(Console.ReadLine());
-        Console.WriteLine("Enter value for coil (0 or 1):");
-        int coilValue;
+        Console.WriteLine("Enter register address:");
+        var registerAddress = Convert.ToInt32(Console.ReadLine());
+        Console.WriteLine("Enter value to write to register:");
+        int registerValue;
         do
         {
-            var result = int.TryParse(Console.ReadLine(), out coilValue);
+            var result = int.TryParse(Console.ReadLine(), out registerValue);
 
             if (result == false)
                 Console.WriteLine("Enter valid value:");
-        } while (coilValue == 0 || coilValue == 1);
+        } while (registerValue == 0 || registerValue == 1);
 
         var modbusClient = new ModbusClient(deviceAddress)
         {
@@ -28,7 +28,7 @@ public class Program
             Parity = Parity.None
         };
 
-        modbusClient.WriteSingleCoil(coilAddress, coilValue == 1);
+        modbusClient.WriteSingleRegister(registerAddress, registerValue);
 
         Console.WriteLine("Value written");
     }
