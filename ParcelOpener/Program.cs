@@ -32,15 +32,15 @@ public class Program
 
         Console.WriteLine("Value written\nCheck status");
 
-        GetLockStatuses(deviceAddress, registerAddress);
+        GetLocksStatuses(registerAddress, modbusClient);
     }
 
-    private List<bool> GetLocksStatuses(int deviceAddress, int registerAddress)
+    public static List<bool> GetLocksStatuses(int registerAddress, ModbusClient modbus)
         {
-            var readResult = Read(SlaveId, OpenLockRegisterAddress, 1);
+            var readResult = modbus.ReadInputRegisters(registerAddress, 1);
             if (readResult == null)
                 return null;
-
+            
             var result = new List<bool>();
             var mask = 1;
             for (byte i = 0; i < 16; i++)
