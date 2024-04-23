@@ -1,4 +1,4 @@
-﻿using EasyModbus;
+﻿using Modbus.Device;
 using System.IO.Ports;
 
 namespace ParcelOpener;
@@ -12,42 +12,53 @@ public class Program
         Console.WriteLine("Enter device address (COM1):");
         var deviceAddress = Console.ReadLine();
         Console.WriteLine("Enter value to write to register:");
-        int registerValue;
+        ushort registerValue;
         do
         {
-            var result = int.TryParse(Console.ReadLine(), out registerValue);
+            var result = ushort.TryParse(Console.ReadLine(), out registerValue);
 
             if (result == false)
                 Console.WriteLine("Enter valid value:");
-        } while (registerValue == 0 || registerValue == 1);
+        } while (registerValue == 0);
 
-        var modbusClient = new ModbusClient(deviceAddress)
+        var serialPort = new SerialPort(deviceAddress)
         {
-            Baudrate = 9600,
-            StopBits = StopBits.Two,
-            Parity = Parity.None
+            BaudRate = 9600,
+            DataBits = 8,
+            StopBits = StopBits.One,
+            Parity = Parity.None,
         };
+        serialPort.Open();
 
-        modbusClient.WriteSingleRegister(registerAddress, registerValue);
+        var master = ModbusSerialMaster.CreateRtu(serialPort);
+
+        if (string.IsNullOrWhiteSpace(deviceAddress))
+        {
+            Console.WriteLine("deviceAddress is not valid");
+            Console.ReadLine();
+            return;
+        }
+
+        var slaveId = byte.Parse(deviceAddress.Replace("COM", string.Empty));
+
+        master.WriteSingleRegister(slaveId, registerAddress, registerValue);
+
 
         Console.WriteLine("Value written\nCheck status");
 
-        GetLocksStatuses(registerAddress, modbusClient);
+
+        Console.WriteLine("Enter lock number to check status:");
+        _ = int.TryParse(Console.ReadLine(), out var lockNumber);
+        GetLockStatus(slaveId, registerAddress, lockNumber, master);
     }
 
-    public static List<bool> GetLocksStatuses(int registerAddress, ModbusClient modbus)
-        {
-            var readResult = modbus.ReadInputRegisters(registerAddress, 1);
-            if (readResult == null)
-                return null;
-            
-            var result = new List<bool>();
-            var mask = 1;
-            for (byte i = 0; i < 16; i++)
-            {
-                result.Add((readResult[0] & mask) == 0);
-                mask <<= 1;
-            }
-            return result;
-        }
+    public static bool GetLockStatus(byte slaveId, ushort registerAddress, int lockNumber, IModbusSerialMaster modbus)
+    {
+        var readResult = modbus.ReadHoldingRegisters(slaveId, registerAddress, 1);
+        if (readResult == null)
+            return false;
+
+        var mask = 1 << lockNumber;
+        return (readResult[0] & mask) == 0;
+    }
 }
